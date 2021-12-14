@@ -14,7 +14,7 @@ eventlet.monkey_patch()
 app = Flask(__name__)
 # app.config['SECRET'] = 'my secret key'
 app.config['TEMPLATES_AUTO_RELOAD'] = True
-app.config['MQTT_BROKER_URL'] = 'localhost'  # '192.168.0.32'
+app.config['MQTT_BROKER_URL'] = '0.0.0.0'
 app.config['MQTT_BROKER_PORT'] = 1883
 app.config['MQTT_CLIENT_ID'] = 'flask_mqtt'
 # app.config['MQTT_CLEAN_SESSION'] = True

@@ -1,7 +1,6 @@
 eventlet==0.33.0
 Flask==2.0.2
 Flask-Bootstrap==3.3.7.1
-Flask-MQTT==1.1.1
 paho-mqtt==1.6.1
 python-socketio==4.6.0
 python-engineio==3.13.2

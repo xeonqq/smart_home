@@ -53,7 +53,7 @@ if __name__ == '__main__':
     client = mqtt.Client("Mqtt-controller", clean_session=True)
     client.on_connect = on_connect
     client.on_message = handle_mqtt_message
-    mqtt_broker = "192.168.0.32"
+    mqtt_broker = '0.0.0.0'  # "192.168.0.32"
     client.connect(mqtt_broker)
     client.loop_start()
 

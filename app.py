@@ -4,6 +4,7 @@ A small Test application to show how to use Flask-MQTT.
 
 """
 import json
+import pathlib
 import urllib
 
 import eventlet
@@ -48,12 +49,15 @@ def handle_on():
 
 @socketio.on('download')
 def handle_download(json_str):
-    print(json_str)
     data = json.loads(json_str)
     filename = extract_filename(data['url'])
+    disk_location = pathlib.Path(data['disk_location'])
+
+    disk_location.mkdir(parents=True, exist_ok=True)
+    file_path = disk_location.joinpath(filename)
 
     msg = dict(
-        msg="Downloaded at: {}".format(filename)
+        msg="Downloaded at: {}".format(str(file_path))
     )
     socketio.emit('message', data=msg)
 
@@ -68,7 +72,7 @@ def handle_download(json_str):
 
         # print("Downlading: {}MB/{}MB, {}%".format(downloaded / 1e6, total_size / 1e6, downloaded / total_size))
 
-    urllib.request.urlretrieve(data['url'], filename, show_progress)
+    urllib.request.urlretrieve(data['url'], str(file_path), show_progress)
 
 
 def on_connect(client, userdata, flags, rc):

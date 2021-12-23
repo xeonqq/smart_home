@@ -20,6 +20,23 @@
 
     return url.protocol === "http:" || url.protocol === "https:";
   }
+  function enable_download() {
+      $('#download').show();
+      $('#downloading').hide();
+<!--      $('#download_progress').hide();-->
+      $('#download_url').prop('readonly', false)
+  }
+
+  function disable_download() {
+          $('#download').hide();
+        $('#downloading').show();
+        $('#download_progress').show();
+        $('#download_url').prop('readonly', true)
+  }
+
+  function to_fixed_decimal(number, digits){
+    return Number(number).toFixed(digits);
+  }
 
   $(document).ready(function() {
     var socket = io.connect('http://' + document.domain + ':' + location.port);
@@ -39,23 +56,31 @@
         var data = '{"url": "' + url + '", "disk_location": "' + disk_location + '"}';
 
         socket.emit('download', data=data);
-        $('#download').hide();
-        $('#downloading').show();
-        $('#download_url').prop('readonly', true);
+        disable_download();
       }
     });
 
     $('#downloading').click(function(event) {
       socket.emit('cancel_download');
-      $('#download').show();
-      $('#downloading').hide();
-      $('#download_url').prop('readonly', false);
+      enable_download();
     });
+
+    socket.on('download_finish', function() {
+      enable_download();
+    });
+
+    socket.on('download_progress', function(data) {
+      var downloaded_mb = to_fixed_decimal((data['downloaded']/1e6),2)
+      var total_mb = to_fixed_decimal(data['total_size']/1e6,2);
+      var percentage = to_fixed_decimal(data['downloaded']/data['total_size']*100,0);
+      var progress = downloaded_mb + 'MB/' + total_mb + 'MB, ' + percentage + '%';
+    $('#download_progress').text(progress)
+    })
 
     socket.on('message', function(data) {
       console.log(data);
       var text = data['msg'];
-      var $textarea = $('#subscribe_messages');
+      var $textarea = $('#log_messages');
       $textarea.val($textarea.val() + text + '\n');
     })
   });
@@ -91,12 +116,13 @@
                 <div class="col-xs-8 col-xs-offset-4">
                   <button id="download" class="btn btn-primary">Download</button>
                   <button id="downloading" class="btn btn-default" style="display: none;">Cancel Downloading...</button>
+                  <label id="download_progress" style="display: none;">none</label>
                 </div>
               </div>
               <div class="form-group">
                 <label class="control-label col-xs-4">Messages:</label>
                 <div class="col-xs-8">
-                  <textarea id="subscribe_messages" class="form-control" rows=10></textarea>
+                  <textarea id="log_messages" class="form-control" rows=10></textarea>
                 </div>
               </div>
             </div>

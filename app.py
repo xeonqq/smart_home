@@ -52,11 +52,23 @@ def handle_download(json_str):
     data = json.loads(json_str)
     filename = extract_filename(data['url'])
 
-    data = dict(
+    msg = dict(
         msg="Downloaded at: {}".format(filename)
     )
-    socketio.emit('message', data=data)
-    urllib.request.urlretrieve(data['url'], filename)
+    socketio.emit('message', data=msg)
+
+    def show_progress(block_num, block_size, total_size):
+        downloaded = block_num * block_size
+        socketio.emit('download_progress', data=dict(
+            downloaded=downloaded,
+            total_size=total_size
+        ))
+        if downloaded >= total_size:
+            socketio.emit('download_finish')
+
+        # print("Downlading: {}MB/{}MB, {}%".format(downloaded / 1e6, total_size / 1e6, downloaded / total_size))
+
+    urllib.request.urlretrieve(data['url'], filename, show_progress)
 
 
 def on_connect(client, userdata, flags, rc):
@@ -69,7 +81,7 @@ def handle_mqtt_message(client, userdata, message):
         payload=message.payload.decode(),
         qos=message.qos,
     )
-    socketio.emit('mqtt_message', data=data)
+    socketio.emit('message', data=data)
 
 
 if __name__ == '__main__':

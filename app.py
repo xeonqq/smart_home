@@ -47,6 +47,11 @@ def handle_on():
     client.publish(SWITCH_POWER_TOPIC, 'ON')
 
 
+@socketio.on('cancel_download')
+def handle_cancel_download():
+    pass
+
+
 @socketio.on('download')
 def handle_download(json_str):
     data = json.loads(json_str)
@@ -57,7 +62,7 @@ def handle_download(json_str):
     file_path = disk_location.joinpath(filename)
 
     msg = dict(
-        msg="Downloaded at: {}".format(str(file_path))
+        msg="Downloading at: {}".format(str(file_path))
     )
     socketio.emit('message', data=msg)
 

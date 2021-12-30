@@ -16,7 +16,7 @@ from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
 
-from utils import extract_filename
+from utils import extract_filename, time_str_to_object, time_object_to_str
 
 eventlet.monkey_patch()
 
@@ -38,16 +38,21 @@ class SwitchDevice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(20), unique=True, nullable=False)
     switched_on = db.Column(db.Boolean, nullable=False, default=False)
-    power_on_schedule = db.Column(db.DateTime, nullable=True)
-    power_off_schedule = db.Column(db.DateTime, nullable=True)
+    power_on_schedule = db.Column(db.Time, nullable=True)
+    power_off_schedule = db.Column(db.Time, nullable=True)
 
     def __repr__(self):
-        return f"Device('{self.name}', '{self.switched_on}', '{self.power_on_schedule}', '{self.power_off_schedule}')"
+        return f"Device('{self.name}', '{self.switched_on}', on at '{self.power_on_schedule}', off at '{self.power_off_schedule}')"
 
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    get_device("Sonoff").power_off_schedule
+    schedule = {
+        'on': time_object_to_str(get_device("Sonoff").power_on_schedule),
+        'off': time_object_to_str(get_device("Sonoff").power_off_schedule)
+    }
+    return render_template('index.html', schedule=schedule)
 
 
 @app.route('/download')
@@ -67,6 +72,17 @@ def handle_on():
     client.publish(SWITCH_POWER_TOPIC, 'ON')
     get_device("Sonoff").switched_on = True
     db.session.commit()
+
+
+@socketio.on('update_schedule')
+def handle_update_schedule(json_str):
+    data = json.loads(json_str)
+    get_device("Sonoff").power_on_schedule = time_str_to_object(data['power_on_schedule'])
+    get_device("Sonoff").power_off_schedule = time_str_to_object(data['power_off_schedule'])
+    db.session.commit()
+
+    print(get_device("Sonoff"))
+    # return redirect(url_for('/'))
 
 
 @socketio.on('cancel_download')

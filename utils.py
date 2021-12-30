@@ -1,3 +1,4 @@
+import datetime
 from os import path
 
 
@@ -8,3 +9,11 @@ def extract_filename(url):
     if scheme_removed.find("/") == -1:
         return ""
     return path.basename(scheme_removed)
+
+
+def time_str_to_object(time_str):
+    return datetime.datetime.strptime(time_str, '%H:%M').time() if time_str else None
+
+
+def time_object_to_str(time, pattern='%H:%M'):
+    return time.strftime(pattern) if time else ''

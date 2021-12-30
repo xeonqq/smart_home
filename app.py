@@ -11,12 +11,13 @@ import urllib
 
 import eventlet
 import paho.mqtt.client as mqtt
+import schedule
 from flask import Flask, render_template
 from flask_bootstrap import Bootstrap
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
 
-from utils import extract_filename, time_str_to_object, time_object_to_str
+from utils import extract_filename, time_str_to_object, time_object_to_str, run_schedule_continuously
 
 eventlet.monkey_patch()
 
@@ -25,6 +26,7 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 bootstrap = Bootstrap(app)
 client = None
+jobs = dict()
 
 SWITCH_POWER_TOPIC = "cmnd/sonoff-socket/POWER"
 SWITCH_POWER_STATE_TOPIC = "stat/sonoff-socket/POWER"
@@ -62,26 +64,38 @@ def download():
 
 @socketio.on('off')
 def handle_off():
-    client.publish(SWITCH_POWER_TOPIC, 'OFF')
+    client.publish(SWITCH_POWER_TOPIC, 'OFF', qos=2)
     get_device("Sonoff").switched_on = False
     db.session.commit()
 
 
 @socketio.on('on')
 def handle_on():
-    client.publish(SWITCH_POWER_TOPIC, 'ON')
+    client.publish(SWITCH_POWER_TOPIC, 'ON', qos=2)
     get_device("Sonoff").switched_on = True
     db.session.commit()
 
 
+def schedule_action(action, sched_data):
+    # action can be 'on','off'
+    func = {'on': handle_on, 'off': handle_off}
+    if action in jobs:
+        schedule.cancel_job(jobs[action])
+    if sched_data['power_{}_schedule'.format(action)]:
+        jobs[action] = schedule.every().day.at(sched_data['power_{}_schedule'.format(action)]).do(func[action])
+
+
 @socketio.on('update_schedule')
 def handle_update_schedule(json_str):
-    data = json.loads(json_str)
-    get_device("Sonoff").power_on_schedule = time_str_to_object(data['power_on_schedule'])
-    get_device("Sonoff").power_off_schedule = time_str_to_object(data['power_off_schedule'])
+    sched_data = json.loads(json_str)
+    schedule_action('on', sched_data)
+    schedule_action('off', sched_data)
+
+    get_device("Sonoff").power_on_schedule = time_str_to_object(sched_data['power_on_schedule'])
+    get_device("Sonoff").power_off_schedule = time_str_to_object(sched_data['power_off_schedule'])
     db.session.commit()
 
-    print(get_device("Sonoff"))
+    # print(get_device("Sonoff"))
     # return redirect(url_for('/'))
 
 
@@ -128,7 +142,7 @@ def handle_mqtt_message(client, userdata, message):
         payload=message.payload.decode(),
         qos=message.qos,
     )
-    socketio.emit('message', data=data)
+    socketio.emit('mqtt_message', data=data)
 
 
 def init_database(database_file):
@@ -151,5 +165,6 @@ if __name__ == '__main__':
     client.connect(mqtt_broker)
     client.loop_start()
     init_database(datebase_file)
+    run_schedule_continuously()
 
     socketio.run(app, host='0.0.0.0', port=5000, use_reloader=False, debug=True)

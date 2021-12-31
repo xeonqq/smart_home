@@ -161,10 +161,10 @@ if __name__ == '__main__':
     client = mqtt.Client("Mqtt-controller", clean_session=True)
     client.on_connect = on_connect
     client.on_message = handle_mqtt_message
-    mqtt_broker = "0.0.0.0"  # "192.168.0.15"
+    mqtt_broker = "127.0.0.1"  # "192.168.0.15"
     client.connect(mqtt_broker)
     client.loop_start()
     init_database(datebase_file)
     run_schedule_continuously()
 
-    socketio.run(app, host='0.0.0.0', port=5000, use_reloader=False, debug=True)
+    socketio.run(app, host='127.0.0.1', port=5000, use_reloader=False, debug=True)

@@ -31,8 +31,8 @@ jobs = dict()
 SWITCH_POWER_TOPIC = "cmnd/sonoff-socket/POWER"
 SWITCH_POWER_STATE_TOPIC = "stat/sonoff-socket/POWER"
 
-datebase_file = "site.db"
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///{}'.format(datebase_file)
+database_file = "site.db"
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///{}'.format(database_file)
 db = SQLAlchemy(app)
 
 
@@ -153,6 +153,16 @@ def init_database(database_file):
         db.session.commit()
 
 
+def init_scheduler():
+    sched_data = {}
+
+    sched_data['power_on_schedule'] = time_object_to_str(get_device("Sonoff").power_on_schedule)
+    sched_data['power_off_schedule'] = time_object_to_str(get_device("Sonoff").power_off_schedule)
+
+    schedule_action('on', sched_data)
+    schedule_action('off', sched_data)
+
+
 def get_device(name):
     return SwitchDevice.query.filter_by(name=name).first()
 
@@ -164,7 +174,9 @@ if __name__ == '__main__':
     mqtt_broker = "0.0.0.0"  # "192.168.0.15"
     client.connect(mqtt_broker)
     client.loop_start()
-    init_database(datebase_file)
+    init_database(database_file)
+    init_scheduler()
+
     run_schedule_continuously()
 
     socketio.run(app, host='0.0.0.0', port=5000, use_reloader=False, debug=True)
